@@ -25,13 +25,9 @@ Schema::create('alerts', function (Blueprint $table) {
     $table->text('message');
 
     $table->string('status')->default('active'); 
+    $table->boolean('escalated')->default(false);
+    $table->boolen('reported')->default(false);
     // active | resolved
-
-    $table->foreignId('resolved_by')
-        ->nullable()
-        ->constrained('users')
-        ->nullOnDelete();
-
     $table->timestamp('resolved_at')->nullable();
 
     $table->timestamps();

@@ -20,16 +20,32 @@ class BranchesTable
                     ->square(),
 
                 TextColumn::make('name')
-                    ->searchable(),
+                ->searchable(),
 
-                TextColumn::make('state'),
+                TextColumn::make('state')
+                ->sortable()
+                 ->searchable(),
 
                 TextColumn::make('phone_number'),
 
-                TextColumn::make('type'),
+
+
+                TextColumn::make('type')
+                ->sortable()
+                ->searchable()
+                ->label('Type')
+                ->badge()
+                ->color(fn ($state) => match ($state) {
+                    'Corporate MB' => 'primary',
+                    'Franchises MB' => 'info',
+                    default => 'gray',
+                }),
+
+
 
                 TextColumn::make('created_at')
-                    ->dateTime(),
+                ->sortable()
+                ->dateTime(),
             ])
             ->filters([
                 //

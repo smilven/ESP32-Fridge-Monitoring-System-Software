@@ -47,8 +47,4 @@ class User extends Authenticatable
         ];
     }
 
-    public function resolvedAlerts()
-{
-    return $this->hasMany(Alert::class, 'resolved_by');
-}
 }

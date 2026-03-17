@@ -9,7 +9,6 @@ class Sensor extends Model
     protected $fillable = [
         'device_id',
         'rom_address',
-        'name',
         'position',
         'max_temp',
         'min_temp',

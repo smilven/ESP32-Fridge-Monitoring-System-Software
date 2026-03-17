@@ -22,10 +22,11 @@ class DeviceForm
                     ->required()
                     ->unique(ignoreRecord: true),
 
+                    
                 TextInput::make('device_token')
                     ->label('Device Token')
                     ->required()
-                        ->dehydrated(false),
+                    ->dehydrated(false),
 
                 TextInput::make('serial_no')
                     ->label('Serial Number')
@@ -36,36 +37,32 @@ class DeviceForm
                     ->options([
                         'online' => 'Online',
                         'offline' => 'Offline',
-                        'maintenance' => 'Maintenance',
-                    ])
-                    ->required(),
+                    ]),
 
                 TextInput::make('firmware_version')
                     ->label('Firmware Version'),
 
-                TextInput::make('wifi_ssid')
-                    ->label('WiFi SSID'),
-
-                TextInput::make('wifi_password')
-                    ->label('WiFi Password')
-                    ->password(),
-
                 TextInput::make('mqtt_broker')
+                    ->required()
                     ->label('MQTT Broker'),
 
                 TextInput::make('mqtt_port')
                     ->numeric()
+                    ->required()
                     ->default(1883),
 
                 TextInput::make('mqtt_username')
+                    ->required()
                     ->label('MQTT Username'),
 
-                       TextInput::make('mqtt_password')
+                TextInput::make('mqtt_password')
                     ->label('MQTT Password')
                     ->password(),
 
-                       TextInput::make('mqtt_topic')
+                TextInput::make('mqtt_topic')
+                    ->required()
                     ->label('MQTT Topic'),
+
 
                 DateTimePicker::make('last_seen')
                     ->label('Last Seen'),

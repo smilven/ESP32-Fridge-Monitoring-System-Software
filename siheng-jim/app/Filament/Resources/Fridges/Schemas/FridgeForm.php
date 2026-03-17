@@ -17,8 +17,16 @@ class FridgeForm
                     ->relationship('branch', 'name')
                     ->required(),
 
-                TextInput::make('type')
-                    ->required(),
+                Select::make('type')
+                ->label('Fridge Type')
+                ->options([
+                    'Upright Chiller ' => 'Upright Chiller',
+                    'Upright Freezer' => 'Upright Freezer',
+                    'Upright Chiller & Freezer' => 'Upright Chiller & Freezer',
+                    'Cool Room' => 'Cool Room'
+                ])
+                ->placeholder('Select Fridge Type')
+                ->required(),
 
                 TextInput::make('model_number'),
                 

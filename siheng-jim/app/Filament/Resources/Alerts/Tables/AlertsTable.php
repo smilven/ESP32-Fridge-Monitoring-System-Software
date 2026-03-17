@@ -21,6 +21,7 @@ class AlertsTable
 
                 TextColumn::make('temperatureLog.temperature')
                     ->label('Temperature')
+                    ->sortable()
                     ->suffix(' °F'),
 
                 BadgeColumn::make('alert_type')
@@ -34,24 +35,36 @@ class AlertsTable
                     ->limit(50),
 
                 BadgeColumn::make('status')
-                ->formatStateUsing(fn($state) => ucfirst($state))
+                    ->formatStateUsing(fn($state) => ucfirst($state))
                     ->colors([
                         'danger' => 'Active',
                         'success' => 'Resolved',
                     ]),
 
-                TextColumn::make('resolvedBy.name')
-                    ->label('Resolved By'),
+                BadgeColumn::make('escalated')
+                    ->formatStateUsing(fn($state) => $state ? 'Yes' : 'No')
+                    ->colors([
+                        'danger' => fn($state) => $state,
+                        'success' => fn($state) => !$state,
+                    ]),
+
+                BadgeColumn::make('reported')
+                    ->formatStateUsing(fn($state) => $state ? 'Yes' : 'No')
+                    ->colors([
+                        'danger' => fn($state) => $state,
+                        'success' => fn($state) => !$state,
+                    ]),
 
                 TextColumn::make('resolved_at')
+                    ->sortable()
                     ->dateTime(),
 
 
 
                 TextColumn::make('created_at')
+                    ->sortable()
                     ->label('Occurred')
                     ->formatStateUsing(fn($state) => $state->diffForHumans()),
             ]);
-
     }
 }

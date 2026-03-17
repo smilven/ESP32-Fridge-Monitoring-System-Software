@@ -16,9 +16,6 @@ class SensorForm
                     ->relationship('device', 'serial_no')
                     ->required(),
 
-                Forms\Components\TextInput::make('name')
-                    ->required(),
-
                  Forms\Components\TextInput::make('rom_address')
                     ->required(),   
 

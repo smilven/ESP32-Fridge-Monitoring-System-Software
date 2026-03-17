@@ -12,7 +12,8 @@ class Alert extends Model
         'alert_type',
         'message',
         'status',
-        'resolved_by',
+        'escalated',
+        'reported',
         'resolved_at',
     ];
 
@@ -24,10 +25,5 @@ class Alert extends Model
     public function temperatureLog()
     {
         return $this->belongsTo(TemperatureLog::class);
-    }
-
-    public function resolvedBy()
-    {
-        return $this->belongsTo(User::class, 'resolved_by');
     }
 }

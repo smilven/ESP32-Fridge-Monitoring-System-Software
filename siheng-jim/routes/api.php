@@ -7,3 +7,6 @@ Route::post('/device/register', [DeviceController::class, 'register']);
 Route::post('/device/config', [DeviceController::class,'config']);
 Route::post('/device/heartbeat', [DeviceController::class,'heartbeat']);
 Route::post('/device/register-sensor', [DeviceController::class, 'registerSensor']);
+
+use App\Http\Controllers\TelegramController;
+Route::post('/telegram/webhook', [TelegramController::class, 'handle']);

@@ -11,3 +11,6 @@ use App\Http\Controllers\TemperatureLogController;
 Route::get('/temperature/download/{sensor_id}', 
     [TemperatureLogController::class,'download']
 );
+
+
+

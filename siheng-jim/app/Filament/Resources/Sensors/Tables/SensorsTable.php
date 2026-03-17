@@ -18,32 +18,34 @@ class SensorsTable
                     ->sortable(),
 
                 TextColumn::make('device.serial_no')
-                    ->label('Device')
+                    ->label('Device Serial Number')
                     ->searchable(),
 
                     TextColumn::make('rom_address')
                     ->label('ROM Address')
                     ->searchable(),
 
-                TextColumn::make('name')
-                    ->searchable(),
-
-                TextColumn::make('position'),
+                TextColumn::make('position')
+                ->sortable(),
 
                 TextColumn::make('min_temp')
-                    ->label('Min Temp'),
+                    ->label('Min Temp')
+                    ->sortable(),
 
                 TextColumn::make('max_temp')
-                    ->label('Max Temp'),
+                    ->label('Max Temp')
+                    ->sortable(),
 
                 TextColumn::make('created_at')
                     ->dateTime()
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
             ])
 
             ->recordActions([
                 EditAction::make(),
             ])
+            ->recordActionsColumnLabel('Actions')
 
             ->toolbarActions([
                 BulkActionGroup::make([

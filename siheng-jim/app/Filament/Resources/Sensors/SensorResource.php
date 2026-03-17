@@ -45,7 +45,6 @@ class SensorResource extends Resource
     {
         return [
             'index' => ListSensors::route('/'),
-            'create' => CreateSensor::route('/create'),
             'edit' => EditSensor::route('/{record}/edit'),
         ];
     }

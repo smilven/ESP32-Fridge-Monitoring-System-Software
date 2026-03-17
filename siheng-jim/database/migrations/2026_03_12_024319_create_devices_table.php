@@ -34,9 +34,7 @@ return new class extends Migration
 
             // optional info
             $table->string('firmware_version')->nullable();
-            $table->string('wifi_ssid')->nullable();
-            $table->string('wifi_password')->nullable();
-
+            
             // mqtt config
             $table->string('mqtt_broker')->nullable();
             $table->integer('mqtt_port')->nullable();

@@ -15,7 +15,6 @@ return new class extends Migration
                 ->constrained()
                 ->cascadeOnDelete();
             $table->string('rom_address')->unique();
-            $table->string('name')->nullable();
             $table->string('position')->nullable();
 
             $table->decimal('max_temp', 5, 2)->nullable();

@@ -15,20 +15,27 @@ class DevicesTable
     {
         return $table
             ->columns([
-                TextColumn::make('id')
-                    ->sortable(),
-
+                TextColumn::make('id'),
+            
                 TextColumn::make('device_uid')
                     ->label('Device UID')
                     ->searchable(),
 
+                TextColumn::make('serial_no')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->label('Device Serial Number'),
+
                 TextColumn::make('device_token')
                     ->label('Device Token')
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->searchable(),
 
                 TextColumn::make('fridge.model_number')
                     ->label('Fridge')
+                    ->searchable()
                     ->sortable(),
+                    
+
 
                 BadgeColumn::make('status')
                     ->colors([
@@ -42,36 +49,42 @@ class DevicesTable
 
                 TextColumn::make('mqtt_topic')
                     ->label('MQTT Topic')
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->limit(30),
                        
                     TextColumn::make('mqtt_username')
                     ->label('MQTT Username')
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->limit(30),   
                     
                     TextColumn::make('mqtt_password')
                     ->label('MQTT Password')
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->limit(30),
 
                 TextColumn::make('last_seen')
+                    ->label('Device Last Seen')
                     ->dateTime()
                     ->sortable(),
 
                 TextColumn::make('created_at')
-                    ->dateTime()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
+                    ->label('Device Created Date')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->dateTime() ])
 
             ->filters([
                 //
             ])
 
             ->recordActions([
-                EditAction::make(),
+
+            EditAction::make(),
             ])
+            ->recordActionsColumnLabel('Actions')
 
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                DeleteBulkAction::make(),
                 ]),
             ]);
     }

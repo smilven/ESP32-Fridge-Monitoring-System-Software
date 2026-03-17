@@ -43,8 +43,6 @@ class TemperatureResource extends Resource
     {
         return [
             'index' => ListTemperatures::route('/'),
-            'create' => CreateTemperature::route('/create'),
-            'edit' => EditTemperature::route('/{record}/edit'),
         ];
     }
 }
