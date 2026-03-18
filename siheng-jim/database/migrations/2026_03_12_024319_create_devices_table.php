@@ -39,7 +39,7 @@ return new class extends Migration
             $table->string('mqtt_broker')->nullable();
             $table->integer('mqtt_port')->nullable();
             $table->string('mqtt_topic')->nullable();
-            $table->integer('mqtt_username')->nullable();
+            $table->string('mqtt_username')->nullable();
             $table->string('mqtt_password')->nullable();
 
             // last heartbeat

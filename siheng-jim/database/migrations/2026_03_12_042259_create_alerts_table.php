@@ -20,13 +20,11 @@ Schema::create('alerts', function (Blueprint $table) {
         ->nullable()
         ->constrained()
         ->nullOnDelete();
-
     $table->string('alert_type'); 
     $table->text('message');
-
     $table->string('status')->default('active'); 
     $table->boolean('escalated')->default(false);
-    $table->boolen('reported')->default(false);
+    $table->boolean('reported')->default(false);
     // active | resolved
     $table->timestamp('resolved_at')->nullable();
 
