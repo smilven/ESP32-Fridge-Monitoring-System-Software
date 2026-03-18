@@ -15,4 +15,8 @@ class ListSensors extends ListRecords
         return [
         ];
     }
+    protected function getTablePollingInterval() : ?string
+    {
+        return '5s';
+    }
 }

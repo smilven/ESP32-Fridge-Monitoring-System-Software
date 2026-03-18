@@ -19,7 +19,18 @@ class Branch extends Model
 {
     return $this -> hasMany(Fridge::class);
 }
-
+    public function sensors()
+    {
+        return $this->hasManyThrough(
+            Sensor::class,
+            Device::class,
+            'fridge_id',   // Device -> Fridge
+            'device_id',   // Sensor -> Device
+            'id',          // Branch id
+            'id'           // Device id
+        )->join('fridges', 'devices.fridge_id', '=', 'fridges.id')
+        ->whereColumn('fridges.branch_id', 'branches.id');
+    }
 }
 
 

@@ -94,7 +94,7 @@ class MqttSubscribe extends Command
                 ]
             );
 
-            Log::info("Stored data for Sensor ID: {$sensor->id} ({$temp}°C)");
+            Log::info("Stored data for Sensor ID: {$sensor->id} ({$temp}°F)");
 
             // 5. Handle Alerts & Telegram
             $this->handleAlerts($sensor, $temp, $alertType, $log);
@@ -121,7 +121,7 @@ class MqttSubscribe extends Command
                     'sensor_id' => $sensor->id,
                     'temperature_log_id' => $log->id,
                     'alert_type' => $alertType,
-                    'message' => "Temperature {$temp}°C is out of range",
+                    'message' => "Temperature {$temp}F is out of range",
                     'status' => 'Active',
                     'escalated' => false,
                     'reported' => false

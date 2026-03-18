@@ -28,4 +28,9 @@ public function alerts()
 {
     return $this->hasMany(Alert::class);
 }
+public function temperatureLatest()
+{
+    return $this->hasOne(TemperatureLatest::class);
+}
+
 }

@@ -10,5 +10,8 @@ class ListAlerts extends ListRecords
 {
     protected static string $resource = AlertsResource::class;
 
-
+    protected function getTablePollingInterval(): ?string
+    {
+        return '5s';
+    }
 }

@@ -8,7 +8,7 @@ use Filament\Actions\EditAction;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
-
+use Filament\Actions\Action;
 class BranchesTable
 {
     public static function configure(Table $table): Table
@@ -51,6 +51,14 @@ class BranchesTable
                 //
             ])
             ->recordActions([
+                Action::make('temperature')
+                    ->label('View')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn ($record) => route(
+                        'filament.admin.resources.branches.temperature',
+                        $record
+                    )),
+
                 EditAction::make(),
             ])
             ->recordActionsColumnLabel('Actions')

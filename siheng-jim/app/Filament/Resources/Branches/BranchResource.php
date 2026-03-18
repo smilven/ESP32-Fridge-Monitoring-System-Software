@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use App\Filament\Resources\Branches\Pages\BranchTemperature;
 
 class BranchResource extends Resource
 {
@@ -41,12 +42,19 @@ class BranchResource extends Resource
         ];
     }
 
-    public static function getPages(): array
-    {
-        return [
-            'index' => ListBranches::route('/'),
-            'create' => CreateBranch::route('/create'),
-            'edit' => EditBranch::route('/{record}/edit'),
-        ];
-    }
+        protected function getFooterWidgets(): array
+        {
+            return [
+                BranchTemperature::class,
+            ];
+        }
+       public static function getPages(): array
+        {
+            return [
+                'index' => Pages\ListBranches::route('/'),
+                'create' => Pages\CreateBranch::route('/create'),
+                'edit' => Pages\EditBranch::route('/{record}/edit'),
+                'temperature' => Pages\BranchTemperature::route('/{record}/temperature'), // 🔥
+            ];
+        }
 }
