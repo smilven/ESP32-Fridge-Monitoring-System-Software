@@ -38,6 +38,34 @@ services:
     networks:
       - laravel
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: laravel_scheduler
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    command: php artisan schedule:work
+    networks:
+      - laravel
+
+  # 🔥 加这个（最关键）
+  mqtt:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: laravel_mqtt
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    command: php artisan mqtt:listen
+    depends_on:
+      - mysql
+    restart: always
+    networks:
+      - laravel
+
 networks:
   laravel:
 
