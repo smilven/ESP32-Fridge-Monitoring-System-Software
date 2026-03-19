@@ -85,7 +85,7 @@ class MqttSubscribe extends Command
             if (!$lastLog) {
                 $shouldStoreLog = true;
             } else {
-                $timeDiff = Carbon::parse($lastLog->recorded_at)->diffInHours($now);
+                $timeDiff = Carbon::parse($lastLog->recorded_at)->diffInMinutes($now);
                 $tempDiff = abs($lastLog->temperature - $temp);
                 
                 // 判断报警状态是否发生了切换 (关键：防止报警期间持续写入)
@@ -93,7 +93,7 @@ class MqttSubscribe extends Command
                 $statusChanged = ($lastLog->alert_status != $currentIsAlerting);
 
                 // 存储判定逻辑
-                if ($timeDiff >= 6) {
+                if ($timeDiff >= 60) {
                     $shouldStoreLog = true; // 情况 A: 时间到了
                 } elseif ($tempDiff >= $temperatureTolerance) {
                     $shouldStoreLog = true; // 情况 B: 温度变化显著
