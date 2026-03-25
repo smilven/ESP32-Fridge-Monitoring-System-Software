@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   app:
     build:
@@ -38,6 +36,20 @@ services:
     networks:
       - laravel
 
+  phpmyadmin:   # 👈 一定要在这里（跟 mysql 同级）
+    image: phpmyadmin/phpmyadmin
+    container_name: laravel_phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: root
+    depends_on:
+      - mysql
+    networks:
+      - laravel
+
   scheduler:
     build:
       context: .
@@ -50,7 +62,6 @@ services:
     networks:
       - laravel
 
-  # 🔥 加这个（最关键）
   mqtt:
     build:
       context: .
