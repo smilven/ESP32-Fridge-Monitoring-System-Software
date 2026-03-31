@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Console\Commands;
-
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Console\Command;
 use PhpMqtt\Client\MqttClient;
 use App\Models\Sensor;
@@ -42,99 +42,101 @@ class MqttSubscribe extends Command
     }
 
 
-    private function processMessage($message)
-    {
-        Log::debug("Received MQTT Payload: " . $message);
+private function processMessage($message)
+{
+    $data = json_decode($message, true);
+    if (!$data) return;
 
-        $data = json_decode($message, true);
-        if (!$data) {
-            Log::error("Invalid JSON received: " . $message);
-            return;
-        }
+    $rom  = $data['rom_address'] ?? null;
+    $temp = $data['temperature'] ?? null;
 
-        $rom  = $data['rom_address'] ?? null;
-        $temp = $data['temperature'] ?? null;
+    if (!$rom || $temp === null) return;
 
-        if (!$rom || $temp === null) {
-            Log::warning("Incomplete payload. ROM: {$rom}, Temp: {$temp}");
-            return;
-        }
+    // --- 1. 并发防抖锁定 (防止同一瞬间双写) ---
+    // 使用 ROM 地址作为锁的 Key，锁定 2 秒，防止 MQTT 重复发送
+    $lockKey = "mqtt_lock_" . $rom;
+    if (!Cache::add($lockKey, true, 2)) {
+        Log::debug("Duplicate message ignored for ROM: {$rom}");
+        return;
+    }
 
-        // 1. 获取传感器信息
-        $sensor = Sensor::where('rom_address', $rom)->first();
-        if (!$sensor) {
-            Log::warning("Sensor {$rom} not found in database.");
-            return;
-        }
+    // 获取传感器
+    $sensor = Sensor::where('rom_address', $rom)->first();
+    if (!$sensor) return;
 
-        // 2. 判定当前温度是否触发警报
-        $alertType = null;
-        if ($sensor->max_temp && $temp > $sensor->max_temp) {
-            $alertType = 'HIGH_TEMP';
-        } elseif ($sensor->min_temp && $temp < $sensor->min_temp) {
-            $alertType = 'LOW_TEMP';
-        }
+    // 判定报警类型
+    $alertType = null;
+    if ($sensor->max_temp && $temp > $sensor->max_temp) {
+        $alertType = 'HIGH_TEMP';
+    } elseif ($sensor->min_temp && $temp < $sensor->min_temp) {
+        $alertType = 'LOW_TEMP';
+    }
 
-        try {
-            $now = Carbon::now();
-            $lastLog = TemperatureLog::where('sensor_id', $sensor->id)
-                ->latest('recorded_at')
-                ->first();
+    try {
+        $now = Carbon::now();
+        $lastLog = TemperatureLog::where('sensor_id', $sensor->id)
+            ->latest('recorded_at')
+            ->first();
 
-            $shouldStoreLog = false;
-            $temperatureTolerance = 3; // 温度变化阈值
+        $currentIsAlerting = $alertType ? true : false;
+        $shouldCreateNewLog = false;
+        $temperatureTolerance = 3; 
 
-            if (!$lastLog) {
-                $shouldStoreLog = true;
-            } else {
-                $timeDiff = Carbon::parse($lastLog->recorded_at)->diffInMinutes($now);
-                $tempDiff = abs($lastLog->temperature - $temp);
-                
-                // 判断报警状态是否发生了切换 (关键：防止报警期间持续写入)
-                $currentIsAlerting = $alertType ? true : false;
-                $statusChanged = ($lastLog->alert_status != $currentIsAlerting);
+        if (!$lastLog) {
+            $shouldCreateNewLog = true;
+        } else {
+            $timeDiff = Carbon::parse($lastLog->recorded_at)->diffInMinutes($now);
+            $tempDiff = abs($lastLog->temperature - $temp);
+            $statusChanged = ($lastLog->alert_status != $currentIsAlerting);
 
-                // 存储判定逻辑
-                if ($timeDiff >= 60) {
-                    $shouldStoreLog = true; // 情况 A: 时间到了
-                } elseif ($tempDiff >= $temperatureTolerance) {
-                    $shouldStoreLog = true; // 情况 B: 温度变化显著
-                } elseif ($statusChanged) {
-                    $shouldStoreLog = true; // 情况 C: 状态切换（刚报警或刚恢复）
-                }
+            // --- 2. 存储判定逻辑优化 ---
+            if ($statusChanged) {
+                // 只要状态变了（正常->报警 或 报警->正常），必须存新的一条
+                $shouldCreateNewLog = true; 
+            } elseif ($timeDiff >= 60 || $tempDiff >= $temperatureTolerance) {
+                // 或者时间太久了，或者温度波动太大，才存新的
+                $shouldCreateNewLog = true;
             }
+            // 如果上述都不符合，说明状态没变，温度也稳定，就不新增记录
+        }
 
-            // 3. 执行 TemperatureLog 写入
-            if ($shouldStoreLog) {
-                $currentLog = TemperatureLog::create([
-                    'sensor_id'    => $sensor->id,
-                    'temperature'  => $temp,
-                    'alert_status' => $alertType ? true : false,
-                    'recorded_at'  => $now
+        // --- 3. 执行存储或更新 ---
+        if ($shouldCreateNewLog) {
+            $currentLog = TemperatureLog::create([
+                'sensor_id'    => $sensor->id,
+                'temperature'  => $temp,
+                'alert_status' => $currentIsAlerting,
+                'recorded_at'  => $now
+            ]);
+            Log::info("Created New Log for Sensor {$sensor->id}: {$temp}°F");
+        } else {
+            // --- 你的需求：报警中或平时不满足条件时，更新最后一条记录的时间和温度，不新增 ---
+            if ($lastLog) {
+                $lastLog->update([
+                    'temperature' => $temp,
+                    'recorded_at' => $now
                 ]);
-                Log::info("Stored Log for Sensor {$sensor->id}: {$temp}°F");
-            } else {
-                // 如果不存新 Log，则引用最后一条记录用于警报逻辑
                 $currentLog = $lastLog;
             }
-
-            // 4. 始终更新 TemperatureLatest (供前端实时查看)
-            TemperatureLatest::updateOrCreate(
-                ['sensor_id' => $sensor->id],
-                [
-                    'temperature'  => $temp,
-                    'alert_status' => $alertType ? true : false,
-                    'recorded_at'  => $now
-                ]
-            );
-
-            // 5. 处理 Telegram 警报逻辑
-            $this->handleAlerts($sensor, $temp, $alertType, $currentLog);
-
-        } catch (\Exception $e) {
-            Log::error("Database Operation Error: " . $e->getMessage());
         }
+
+        // 4. 始终更新实时表
+        TemperatureLatest::updateOrCreate(
+            ['sensor_id' => $sensor->id],
+            [
+                'temperature'  => $temp,
+                'alert_status' => $currentIsAlerting,
+                'recorded_at'  => $now
+            ]
+        );
+
+        // 5. 处理警报
+        $this->handleAlerts($sensor, $temp, $alertType, $currentLog);
+
+    } catch (\Exception $e) {
+        Log::error("Database Error: " . $e->getMessage());
     }
+}
 
     private function handleAlerts($sensor, $temp, $alertType, $log)
     {

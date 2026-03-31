@@ -64,8 +64,71 @@ public function config(Request $request)
         'sensors' => $sensors
     ]);
 }
+public function updateStatus(Request $request)
+{
+    $device = Device::where('device_uid', $request->device_uid)
+        ->where('device_token', $request->device_token)
+        ->first();
 
-    public function heartbeat(Request $request)
+    if (!$device) {
+        return response()->json(['error' => 'not found'], 401);
+    }
+
+    // ⭐ 记录旧状态
+    $oldStatus = $device->status;
+
+    // ⭐ 更新状态 + 心跳
+    $device->status = $request->status;
+    $device->last_seen = now();
+    $device->save();
+
+    $token = env('TELEGRAM_BOT_TOKEN');
+
+    // 🚨 1. error（只发一次）
+    if ($request->status === 'error' && $oldStatus !== 'error') {
+
+        $message = "⚠️ <b>MQTT ERROR</b>\n"
+            . "Device: {$device->serial_no}\n"
+            . "Time: " . now();
+
+        $this->sendTelegram($token, $message);
+    }
+
+    // 🟢 2. error → online（恢复）
+    if ($request->status === 'online' && $oldStatus === 'error') {
+
+        $message = "❤️‍🩹 <b>DEVICE RECOVERED</b>\n"
+            . "Device: {$device->serial_no}\n"
+            . "Time: " . now();
+
+        $this->sendTelegram($token, $message);
+    }
+
+    return response()->json(['message' => 'updated']);
+}
+
+private function sendTelegram($token, $message)
+{
+    \Http::get("https://api.telegram.org/bot{$token}/sendMessage", [
+        'chat_id' => env('TELEGRAM_CHAT_ID'),
+        'text' => $message,
+        'parse_mode' => 'HTML'
+    ]);
+
+    \Http::get("https://api.telegram.org/bot{$token}/sendMessage", [
+        'chat_id' => env('TELEGRAM_GROUP_ID'),
+        'text' => $message,
+        'parse_mode' => 'HTML'
+    ]);
+
+    \Http::get("https://api.telegram.org/bot{$token}/sendMessage", [
+        'chat_id' => env('TELEGRAM_TECH_GROUP_ID'),
+        'text' => $message,
+        'parse_mode' => 'HTML'
+    ]);
+}
+
+public function heartbeat(Request $request)
 {
     $device = Device::where('device_uid',$request->device_uid)
         ->where('device_token',$request->device_token)
@@ -76,30 +139,51 @@ public function config(Request $request)
             'error'=>'device not found'
         ],401);
     }
+
+    $wasOffline = ($device->status === 'offline'); // ⭐ 关键
+
     if ($device->status !== 'error') {
-            $device->status = 'online';
-            $device->last_seen = now()->setTimeZone('Asia/kuala_lumpur');
-            $device->save();
+        $device->status = 'online';
+        $device->last_seen = now();
+        $device->save();
     }
+
+    // ✅ 只有 offline → online 才发送
+    if ($wasOffline) {
+
+        $token = env('TELEGRAM_BOT_TOKEN');
+
+        $message = "🟢 <b>DEVICE ONLINE</b>\n"
+            . "Device: {$device->serial_no}\n"
+            . "Time: " . now();
+
+        // Crew
+        \Http::get("https://api.telegram.org/bot{$token}/sendMessage", [
+            'chat_id' => env('TELEGRAM_CHAT_ID'),
+            'text' => $message,
+            'parse_mode' => 'HTML'
+        ]);
+
+        // QA
+        \Http::get("https://api.telegram.org/bot{$token}/sendMessage", [
+            'chat_id' => env('TELEGRAM_GROUP_ID'),
+            'text' => $message,
+            'parse_mode' => 'HTML'
+        ]);
+
+        // Tech
+        \Http::get("https://api.telegram.org/bot{$token}/sendMessage", [
+            'chat_id' => env('TELEGRAM_TECH_GROUP_ID'),
+            'text' => $message,
+            'parse_mode' => 'HTML'
+        ]);
+    }
+
     return response()->json([
         'message'=>'heartbeat received'
     ]);
 }
-    public function updateStatus(Request $request)
-{
-    $device = Device::where('device_uid', $request->device_uid)
-        ->where('device_token', $request->device_token)
-        ->first();
 
-    if (!$device) {
-        return response()->json(['error' => 'not found'], 401);
-    }
-
-    $device->status = $request->status;
-    $device->save();
-
-    return response()->json(['message' => 'updated']);
-}
 public function registerSensor(Request $request)
 {
     $request->validate([
