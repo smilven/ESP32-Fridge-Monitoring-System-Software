@@ -27,6 +27,23 @@ class TemperaturesTable
                     ->label('Device Serial Number')
                     ->searchable(),
 
+                TextColumn::make('sensor.device.status')
+                    ->label('Device Status')
+                   ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        'online' => 'success',
+                        'offline' => 'danger',
+                        'error' => 'warning',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'online' => 'Online',
+                        'offline' => 'Offline',
+                        'error' => 'Error',
+                        default => 'Unknown',
+                    })
+                     ->sortable(),
+
                 TextColumn::make('sensor.device.fridge.model_number')
                     ->label('Fridge'),
 

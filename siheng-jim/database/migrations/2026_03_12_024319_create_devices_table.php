@@ -36,8 +36,8 @@ return new class extends Migration
             $table->string('firmware_version')->nullable();
             
             // mqtt config
-            $table->string('mqtt_broker')->nullable();
-            $table->integer('mqtt_port')->nullable();
+            $table->string('mqtt_broker')->default('broker.emqx.io');
+            $table->integer('mqtt_port')->default(1883);
             $table->string('mqtt_topic')->nullable();
             $table->string('mqtt_username')->nullable();
             $table->string('mqtt_password')->nullable();

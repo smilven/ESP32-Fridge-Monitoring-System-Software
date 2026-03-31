@@ -15,7 +15,7 @@ class DeviceController extends Controller
 
         $request->validate([
             'device_uid' => 'required|string',
-            'serial_no' => 'required|string'
+            'serial_no' => 'required|string',
         ]);
 
         $device = Device::where('device_uid', $request->device_uid)->first();
@@ -25,6 +25,9 @@ class DeviceController extends Controller
             $device = Device::create([
                 'device_uid' => $request->device_uid,
                 'serial_no' => $request->serial_no,
+                'mqtt_port' => 1883,
+                'mqtt_broker' =>'broker.emqx.io',
+                'mqtt_topic' => $request->device_uid . '/temp',
                 'device_token' => Str::random(40),
             ]);
         }
@@ -53,12 +56,11 @@ public function config(Request $request)
         ->get(['rom_address', 'min_temp', 'max_temp']);
 
     return response()->json([
-        'mqtt_broker'   => $device->mqtt_broker,
-        'mqtt_port'     => $device->mqtt_port,
-        'mqtt_topic'    => $device->mqtt_topic,
+        'mqtt_broker' => $device->mqtt_broker ?? 'broker.emqx.io',
+        'mqtt_port'   => $device->mqtt_port ?? 1883,
+        'mqtt_topic' => "{$device->device_uid}/temp",
         'mqtt_username' => $device->mqtt_username,
         'mqtt_password' => $device->mqtt_password,
-
         'sensors' => $sensors
     ]);
 }
@@ -74,16 +76,30 @@ public function config(Request $request)
             'error'=>'device not found'
         ],401);
     }
-
-        $device->status = 'online';
-        $device->last_seen = now()->setTimeZone('Asia/kuala_lumpur');
-        $device->save();
-
+    if ($device->status !== 'error') {
+            $device->status = 'online';
+            $device->last_seen = now()->setTimeZone('Asia/kuala_lumpur');
+            $device->save();
+    }
     return response()->json([
         'message'=>'heartbeat received'
     ]);
 }
+    public function updateStatus(Request $request)
+{
+    $device = Device::where('device_uid', $request->device_uid)
+        ->where('device_token', $request->device_token)
+        ->first();
 
+    if (!$device) {
+        return response()->json(['error' => 'not found'], 401);
+    }
+
+    $device->status = $request->status;
+    $device->save();
+
+    return response()->json(['message' => 'updated']);
+}
 public function registerSensor(Request $request)
 {
     $request->validate([

@@ -41,9 +41,15 @@ class DevicesTable
                     ->colors([
                         'success' => 'online',
                         'danger' => 'offline',
-                        'warning' => 'maintenance',
-                    ]),
-
+                        'warning' => 'error',
+                    ])
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'online' => 'Online',
+                        'offline' => 'Offline',
+                        'error' => 'Error',
+                        default => 'Unknown',
+                    }),
+                    
                 TextColumn::make('firmware_version')
                     ->label('Firmware'),
 
