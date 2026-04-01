@@ -11,12 +11,16 @@ use Filament\Actions\Action;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Illuminate\Database\Eloquent\Builder;
 
 class TemperaturesTable
 {
     public static function configure(Table $table): Table
     {
         return $table
+        ->modifyQueryUsing(fn (Builder $query) => $query->with([
+            'sensor.device.fridge.branch' // 一次性把整条链条查出来
+        ]))
             ->columns([
 
                 TextColumn::make('sensor.rom_address')

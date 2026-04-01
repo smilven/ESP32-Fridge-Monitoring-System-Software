@@ -42,12 +42,12 @@ class BranchResource extends Resource
         ];
     }
 
-        protected function getFooterWidgets(): array
+        /*protected function getFooterWidgets(): array
         {
             return [
                 BranchTemperature::class,
             ];
-        }
+        }*/
        public static function getPages(): array
         {
             return [

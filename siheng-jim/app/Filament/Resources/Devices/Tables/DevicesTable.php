@@ -8,12 +8,14 @@ use Filament\Actions\EditAction;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
+use Illuminate\Database\Eloquent\Builder;
 
 class DevicesTable
 {
     public static function configure(Table $table): Table
     {
         return $table
+        ->modifyQueryUsing(fn (Builder $query) => $query->with(['fridge']))
             ->columns([
                 TextColumn::make('id'),
             

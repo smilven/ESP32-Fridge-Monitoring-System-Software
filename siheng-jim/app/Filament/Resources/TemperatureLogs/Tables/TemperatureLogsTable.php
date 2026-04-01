@@ -5,12 +5,16 @@ namespace App\Filament\Resources\TemperatureLogs\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
+use Illuminate\Database\Eloquent\Builder;
 
 class TemperatureLogsTable
 {
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with([
+            'sensor.device.fridge.branch' // 一次性把整条链条查出来
+        ]))
             ->columns([
 
                 TextColumn::make('sensor.rom_address')
