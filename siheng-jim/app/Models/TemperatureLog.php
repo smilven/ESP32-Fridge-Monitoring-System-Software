@@ -10,6 +10,7 @@ class TemperatureLog extends Model
         'sensor_id',
         'temperature',
         'alert_status',
+        'duration_minutes',
         'recorded_at',
     ];
 

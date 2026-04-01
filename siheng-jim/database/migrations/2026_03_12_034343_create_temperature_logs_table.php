@@ -12,16 +12,12 @@ return new class extends Migration
             $table->id();
 
             $table->foreignId('sensor_id')
-                ->constrained()
-                ->cascadeOnDelete();
-
+            ->constrained()
+            ->cascadeOnDelete();
             $table->decimal('temperature', 5, 2);
-
-            $table->boolean('alert_status')
-                ->default(false);
-
+            $table->boolean('alert_status')->default(false);
+            $table->integer('duration_minutes')->default(0);
             $table->timestamp('recorded_at');
-
             $table->timestamps();
 
         });

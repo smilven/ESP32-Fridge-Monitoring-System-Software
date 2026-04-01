@@ -43,101 +43,124 @@ class MqttSubscribe extends Command
 
 
 
-            private function processMessage($message)
-        {
-            $data = json_decode($message, true);
-            if (!$data) return;
+private function processMessage($message)
+    {
+        Log::debug("Received MQTT Payload: " . $message);
 
-            $rom  = $data['rom_address'] ?? null;
-            $temp = $data['temperature'] ?? null;
-
-            if (!$rom || $temp === null) return;
-
-            // --- 1. 并发防抖锁定 (防止同一瞬间双写) ---
-            // 使用 ROM 地址作为锁的 Key，锁定 2 秒，防止 MQTT 重复发送
-            $lockKey = "mqtt_lock_" . $rom;
-            if (!Cache::add($lockKey, true, 2)) {
-                Log::debug("Duplicate message ignored for ROM: {$rom}");
-                return;
-            }
-
-            // 获取传感器
-            $sensor = Sensor::where('rom_address', $rom)->first();
-            if (!$sensor) return;
-
-            // 判定报警类型
-            $alertType = null;
-            if ($sensor->max_temp && $temp > $sensor->max_temp) {
-                $alertType = 'HIGH_TEMP';
-            } elseif ($sensor->min_temp && $temp < $sensor->min_temp) {
-                $alertType = 'LOW_TEMP';
-            }
-
-            try {
-                $now = Carbon::now();
-                $lastLog = TemperatureLog::where('sensor_id', $sensor->id)
-                    ->latest('recorded_at')
-                    ->first();
-
-                $currentIsAlerting = $alertType ? true : false;
-                $shouldCreateNewLog = false;
-                $temperatureTolerance = 3; 
-
-                if (!$lastLog) {
-                    $shouldCreateNewLog = true;
-                } else {
-                    $timeDiff = Carbon::parse($lastLog->recorded_at)->diffInMinutes($now);
-                    $tempDiff = abs($lastLog->temperature - $temp);
-                    $statusChanged = ($lastLog->alert_status != $currentIsAlerting);
-
-                    // --- 2. 存储判定逻辑优化 ---
-                    if ($statusChanged) {
-                        // 只要状态变了（正常->报警 或 报警->正常），必须存新的一条
-                        $shouldCreateNewLog = true; 
-                    } elseif ($timeDiff >= 60 || $tempDiff >= $temperatureTolerance) {
-                        // 或者时间太久了，或者温度波动太大，才存新的
-                        $shouldCreateNewLog = true;
-                    }
-                    // 如果上述都不符合，说明状态没变，温度也稳定，就不新增记录
-                }
-
-                // --- 3. 执行存储或更新 ---
-                if ($shouldCreateNewLog) {
-                    $currentLog = TemperatureLog::create([
-                        'sensor_id'    => $sensor->id,
-                        'temperature'  => $temp,
-                        'alert_status' => $currentIsAlerting,
-                        'recorded_at'  => $now
-                    ]);
-                    Log::info("Created New Log for Sensor {$sensor->id}: {$temp}°F");
-                } else {
-                    // --- 你的需求：报警中或平时不满足条件时，更新最后一条记录的时间和温度，不新增 ---
-                    if ($lastLog) {
-                        $lastLog->update([
-                            'temperature' => $temp,
-                            'recorded_at' => $now
-                        ]);
-                        $currentLog = $lastLog;
-                    }
-                }
-
-                // 4. 始终更新实时表
-                TemperatureLatest::updateOrCreate(
-                    ['sensor_id' => $sensor->id],
-                    [
-                        'temperature'  => $temp,
-                        'alert_status' => $currentIsAlerting,
-                        'recorded_at'  => $now
-                    ]
-                );
-
-                // 5. 处理警报
-                $this->handleAlerts($sensor, $temp, $alertType, $currentLog);
-
-            } catch (\Exception $e) {
-                Log::error("Database Error: " . $e->getMessage());
-            }
+        $data = json_decode($message, true);
+        if (!$data) {
+            Log::error("Invalid JSON received: " . $message);
+            return;
         }
+
+        $rom  = $data['rom_address'] ?? null;
+        $temp = $data['temperature'] ?? null;
+
+        if (!$rom || $temp === null) {
+            Log::warning("Incomplete payload. ROM: {$rom}, Temp: {$temp}");
+            return;
+        }
+
+        // --- 1. 原子锁逻辑：防止同一瞬间重复写入 ---
+        // 使用 ROM 地址作为锁，锁定 2 秒。如果 2 秒内有相同 ROM 的消息进来，直接跳过。
+        $lockKey = "mqtt_lock_" . $rom;
+        if (!Cache::add($lockKey, true, 2)) {
+            Log::debug("Duplicate message ignored for ROM: {$rom}");
+            return;
+        }
+
+        // 获取传感器信息
+        $sensor = Sensor::where('rom_address', $rom)->first();
+        if (!$sensor) {
+            Log::warning("Sensor {$rom} not found in database.");
+            return;
+        }
+
+        // 判定当前温度是否触发警报
+        $alertType = null;
+        if ($sensor->max_temp && $temp > $sensor->max_temp) {
+            $alertType = 'HIGH_TEMP';
+        } elseif ($sensor->min_temp && $temp < $sensor->min_temp) {
+            $alertType = 'LOW_TEMP';
+        }
+
+        try {
+            $now = Carbon::now();
+            $lastLog = TemperatureLog::where('sensor_id', $sensor->id)
+                ->latest('recorded_at')
+                ->first();
+
+            $currentIsAlerting = $alertType ? true : false;
+            $shouldCreateNewLog = false;
+            $temperatureTolerance = 3; // 温度变化阈值
+
+            if (!$lastLog) {
+                $shouldCreateNewLog = true;
+            } else {
+                $timeDiff = Carbon::parse($lastLog->recorded_at)->diffInMinutes($now);
+                $tempDiff = abs($lastLog->temperature - $temp);
+                
+                // 判断状态是否切换 (正常 <-> 报警)
+                $statusChanged = ($lastLog->alert_status != $currentIsAlerting);
+
+                // 判定是否需要【新增】记录
+                if ($statusChanged) {
+                    $shouldCreateNewLog = true; // 情况 A: 状态切换了，必须开新记录
+                } elseif ($timeDiff >= 60) {
+                    $shouldCreateNewLog = true; // 情况 B: 距离上次记录超过 1 小时
+                } elseif ($tempDiff >= $temperatureTolerance) {
+                    $shouldCreateNewLog = true; // 情况 C: 温度波动超过 3 度
+                }
+            }
+
+            // --- 2. 执行 TemperatureLog 写入或更新逻辑 ---
+            if ($shouldCreateNewLog) {
+                // 创建新记录
+                $currentLog = TemperatureLog::create([
+                    'sensor_id'        => $sensor->id,
+                    'temperature'      => $temp,
+                    'alert_status'     => $currentIsAlerting,
+                    'duration_minutes' => 0, // 新记录初始时长为 0
+                    'recorded_at'      => $now
+                ]);
+                Log::info("Created New Log for Sensor {$sensor->id}: {$temp}°F");
+            } else {
+                // --- 核心修改：如果不创建新纪录，则更新最后一条记录的时长 ---
+                if ($lastLog) {
+                    $startTime = Carbon::parse($lastLog->created_at);
+                    // 使用该记录最初创建的时间 (created_at) 与当前时间对比计算时长
+                    $duration = (int)abs($now->diffInMinutes($startTime));
+
+                    $lastLog->update([
+                        'temperature'      => $temp,
+                        'recorded_at'      => $now,
+                        'duration_minutes' => $duration // 更新已持续的时长
+                    ]);
+                    $currentLog = $lastLog;
+                } else {
+                    $currentLog = null;
+                }
+            }
+
+            // 3. 始终更新 TemperatureLatest (供前端实时查看)
+            TemperatureLatest::updateOrCreate(
+                ['sensor_id' => $sensor->id],
+                [
+                    'temperature'  => $temp,
+                    'alert_status' => $currentIsAlerting,
+                    'recorded_at'  => $now
+                ]
+            );
+
+            // 4. 处理 Telegram 警报逻辑
+            if ($currentLog) {
+                $this->handleAlerts($sensor, $temp, $alertType, $currentLog);
+            }
+
+        } catch (\Exception $e) {
+            Log::error("Database Operation Error: " . $e->getMessage());
+        }
+    }
 
     private function handleAlerts($sensor, $temp, $alertType, $log)
     {
