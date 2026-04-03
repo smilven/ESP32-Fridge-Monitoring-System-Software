@@ -17,6 +17,7 @@ class SensorForm
                     ->required(),
 
                  Forms\Components\TextInput::make('rom_address')
+                    ->readOnly()
                     ->required(),   
 
                 Forms\Components\TextInput::make('position')
