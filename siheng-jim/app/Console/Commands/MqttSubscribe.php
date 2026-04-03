@@ -84,6 +84,8 @@ private function processMessage($message)
             $alertType = 'LOW_TEMP';
         }
 
+        $currentIsAlerting = $alertType ? true : false;
+
         try {
             $now = Carbon::now();
             $lastLog = TemperatureLog::where('sensor_id', $sensor->id)
@@ -109,9 +111,9 @@ private function processMessage($message)
              }elseif($timeSinceFirstEntry >= 60){
                 // 已经持续了60分钟，强制创建新记录
                 $shouldCreateNewLog = true;
-             }elseif($timDiff >= $temperatureTolerance){   
-                // 温度变化超过阈值，创建新记录
-                $shouldCreateNewLog = true;
+             }elseif(!$currentIsAlerting && $timDiff >= $temperatureTolerance){   
+                // 温度变化超过阈值，创建新记录 (仅限于从正常变为正常的情况，避免频繁记录警报状态的微小波动)
+                 $shouldCreateNewLog = true;
              }
             }
 
