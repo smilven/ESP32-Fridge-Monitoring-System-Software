@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\Http;
 Schedule::call(function () {
 
     $token = env('TELEGRAM_BOT_TOKEN');
-    $crewId = env('TELEGRAM_CHAT_ID');
-    $groupId = env('TELEGRAM_GROUP_ID');
     $techGroupId = env('TELEGRAM_TECH_GROUP_ID');
 
     // 找出刚刚变 offline 的设备（关键！）
@@ -24,26 +22,14 @@ Schedule::call(function () {
         ->get();
 
     foreach ($devices as $device) {
-
+    $branchName = optional($device->fridge->branch)->name ?? 'Unknown';
         // 1️⃣ 更新状态
         $device->update(['status' => 'offline']);
         // 2️⃣ 发送 Telegram
         $message = "🔌 <b>DEVICE OFFLINE</b>\n"
             . "Device: {$device->serial_no}\n"
+            . "Location: {$branchName}\n"
             . "Last Seen: {$device->last_seen}";
-
-             // Crew group
-        Http::get("https://api.telegram.org/bot{$token}/sendMessage", [
-            'chat_id' => $crewId,
-            'text' => $message,
-            'parse_mode' => 'HTML'
-        ]);
-        // QA group
-        Http::get("https://api.telegram.org/bot{$token}/sendMessage", [
-            'chat_id' => $groupId,
-            'text' => $message,
-            'parse_mode' => 'HTML'
-        ]);
 
         // Tech group
         Http::get("https://api.telegram.org/bot{$token}/sendMessage", [

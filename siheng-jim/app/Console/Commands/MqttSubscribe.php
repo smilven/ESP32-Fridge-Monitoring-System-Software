@@ -94,23 +94,25 @@ private function processMessage($message)
             $shouldCreateNewLog = false;
             $temperatureTolerance = 3; // 温度变化阈值
 
-            if (!$lastLog) {
+            if(!$lastLog) {
+                // 没有历史记录，必须创建
                 $shouldCreateNewLog = true;
             } else {
-                $timeDiff = Carbon::parse($lastLog->recorded_at)->diffInMinutes($now);
-                $tempDiff = abs($lastLog->temperature - $temp);
-                
-                // 判断状态是否切换 (正常 <-> 报警)
-                $statusChanged = ($lastLog->alert_status != $currentIsAlerting);
+             $startTime = Carbon::parse($lastLog->created_at);
+             $timeSinceFirstEntry = $startTime->diffInMinutes($now);
+             
+             $timDiff =abs($lastLog->temperature - $temp);
+             $statusChanges =($lastLog->alert_status != $currentIsAlerting);
 
-                // 判定是否需要【新增】记录
-                if ($statusChanged) {
-                    $shouldCreateNewLog = true; // 情况 A: 状态切换了，必须开新记录
-                } elseif ($timeDiff >= 60) {
-                    $shouldCreateNewLog = true; // 情况 B: 距离上次记录超过 1 小时
-                } elseif ($tempDiff >= $temperatureTolerance) {
-                    $shouldCreateNewLog = true; // 情况 C: 温度波动超过 3 度
-                }
+             if($statusChanges){
+                $shouldCreateNewLog = true;
+             }elseif($timeSinceFirstEntry >= 60){
+                // 已经持续了60分钟，强制创建新记录
+                $shouldCreateNewLog = true;
+             }elseif($timDiff >= $temperatureTolerance){   
+                // 温度变化超过阈值，创建新记录
+                $shouldCreateNewLog = true;
+             }
             }
 
             // --- 2. 执行 TemperatureLog 写入或更新逻辑 ---
@@ -126,7 +128,7 @@ private function processMessage($message)
                 Log::info("Created New Log for Sensor {$sensor->id}: {$temp}°F");
             } else {
                 // --- 核心修改：如果不创建新纪录，则更新最后一条记录的时长 ---
-                if ($lastLog) {
+                if ($lastLog && $lastLog->alert_status == $currentIsAlerting) {
                     $startTime = Carbon::parse($lastLog->created_at);
                     // 使用该记录最初创建的时间 (created_at) 与当前时间对比计算时长
                     $duration = (int)abs($now->diffInMinutes($startTime));
@@ -168,7 +170,7 @@ private function processMessage($message)
 
         $token = env('TELEGRAM_BOT_TOKEN');
         $chat_id = env('TELEGRAM_CHAT_ID');
-        $group_chat_id = env('TELEGRAM_GROUP_ID');
+        $qa_chat_id = env('TELEGRAM_QA_ID');
         $tech_group_id = env('TELEGRAM_TECH_GROUP_ID');
 
         if ($alertType) {
@@ -190,15 +192,15 @@ private function processMessage($message)
 
                 $this->sendTelegram($token, $chat_id, "🚨 <b>FRIDGE ALERT</b>\nSensor: {$sensor->rom_address}\nTemp: {$temp}°F\nType: {$alertType}", $alert->id);
             } else {
-                // 报警持续中的冷却逻辑 (60秒发一次，且如果已经被 report 了就不再发)
-                if (!$alert->reported && $alert->updated_at->diffInSeconds(now()) >= 60) {
+                // 报警持续中的冷却逻辑 (15分钟发一次，且如果已经被 report 了就不再发)
+                if (!$alert->reported && $alert->updated_at->diffInMinutes(now()) >= 15) {
                     $this->sendTelegram($token, $chat_id, "⚠️ <b>STILL ACTIVE</b>\nSensor: {$sensor->rom_address}\nTemp: {$temp}°F", $alert->id);
                     $alert->touch(); 
                 }
 
-                // 升级逻辑 (5分钟没解决，发去大群)
-                if ($alert->created_at->diffInMinutes(now()) >= 5 && !$alert->escalated) {
-                    $this->sendTelegram($token, $group_chat_id, "🚨 <b>ESCALATION</b>\nSensor: {$sensor->rom_address}\nImmediate action required!");
+                // 升级逻辑 (15分钟没解决，发去大群)
+                if ($alert->created_at->diffInMinutes(now()) >= 15 && !$alert->escalated) {
+                    $this->sendTelegram($token, $qa_chat_id, "🚨 <b>ESCALATION</b>\nSensor: {$sensor->rom_address}\nImmediate action required!");
                     $alert->update(['escalated' => true]);
                 }
             }
@@ -213,7 +215,7 @@ private function processMessage($message)
                 $this->sendTelegram($token, $chat_id, $msg);
 
                 if ($activeAlert->escalated) {
-                    $this->sendTelegram($token, $group_chat_id, $msg);
+                    $this->sendTelegram($token, $qa_chat_id, $msg);
                 }
                 if ($activeAlert->reported) {
                     $this->sendTelegram($token, $tech_group_id, $msg);

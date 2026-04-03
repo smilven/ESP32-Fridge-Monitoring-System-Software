@@ -60,6 +60,22 @@ class BranchTemperature extends Page implements HasTable
                 ->label('Fridge')
                 ->searchable(),
 
+            Tables\Columns\TextColumn::make('device.status')
+                    ->label('Device Status')
+                   ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        'online' => 'success',
+                        'offline' => 'danger',
+                        'error' => 'warning',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'online' => 'Online',
+                        'offline' => 'Offline',
+                        'error' => 'Error',
+                        default => 'Unknown',
+                    }),
+
             Tables\Columns\TextColumn::make('rom_address')
                 ->label('ROM Address')
                 ->searchable(),
@@ -87,7 +103,6 @@ class BranchTemperature extends Page implements HasTable
                     $temp = $record->temperatureLatest->temperature ?? null;
 
                     if (!$temp) return 'N/A';
-
                     if ($temp > $record->max_temp) return 'High';
                     if ($temp < $record->min_temp) return 'Low';
 
