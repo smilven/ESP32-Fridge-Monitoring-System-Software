@@ -19,6 +19,16 @@ class DevicesTable
             ->columns([
                 TextColumn::make('id'),
             
+                TextColumn::make('fridge.branch.name')
+                    ->label('Outlet')
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('fridge.model_number')
+                    ->label('Fridge')
+                    ->searchable()
+                    ->sortable(),
+
                 TextColumn::make('device_uid')
                     ->label('Device UID')
                     ->searchable(),
@@ -31,13 +41,6 @@ class DevicesTable
                     ->label('Device Token')
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->searchable(),
-
-                TextColumn::make('fridge.model_number')
-                    ->label('Fridge')
-                    ->searchable()
-                    ->sortable(),
-                    
-
 
                 BadgeColumn::make('status')
                     ->colors([

@@ -9,6 +9,8 @@ use Filament\Resources\Pages\EditRecord;
 class EditBranch extends EditRecord
 {
     protected static string $resource = BranchResource::class;
+   
+    protected static ?string $title = 'Outlet';
 
     protected function getHeaderActions(): array
     {

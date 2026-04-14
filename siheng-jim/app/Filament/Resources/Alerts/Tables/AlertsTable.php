@@ -14,8 +14,18 @@ class AlertsTable
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
+                 TextColumn::make('sensor.device.fridge.branch.name')
+                    ->searchable()
+                    ->label('Outlet')
+                    ->toggleable(isToggledHiddenByDefault: false),
+            
+                TextColumn::make('sensor.device.fridge.model_number')
+                        ->toggleable(isToggledHiddenByDefault: false)
+                        ->searchable()
+                        ->label('Fridge'),  
 
                 TextColumn::make('sensor.rom_address')
+                    ->toggleable(isToggledHiddenByDefault: false)
                     ->label('Sensor')
                     ->searchable(),
 

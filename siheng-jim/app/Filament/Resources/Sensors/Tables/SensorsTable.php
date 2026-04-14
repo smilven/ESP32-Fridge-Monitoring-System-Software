@@ -17,6 +17,18 @@ class SensorsTable
                 TextColumn::make('id')
                     ->sortable(),
 
+                TextColumn::make('device.fridge.branch.name')
+                    ->label('Outlet')
+                    ->toggleable(isToggledHiddenByDefault: false)
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('device.fridge.model_number')
+                    ->label('Fridge')
+                    ->toggleable(isToggledHiddenByDefault: false)
+                    ->searchable()
+                    ->sortable(),   
+
                 TextColumn::make('device.serial_no')
                     ->label('Device Serial Number')
                     ->searchable(),
@@ -26,6 +38,7 @@ class SensorsTable
                     ->searchable(),
 
                 TextColumn::make('position')
+                ->toggleable(isToggledHiddenByDefault: false)
                 ->sortable(),
 
                 TextColumn::make('min_temp')

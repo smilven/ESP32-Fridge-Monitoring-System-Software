@@ -17,7 +17,7 @@ class BranchTemperature extends Page implements HasTable
 
     protected static string $resource = BranchResource::class;
 
-    protected static ?string $title = 'Branch Temperature'; // breadcrumb 用
+    protected static ?string $title = 'Outlet Temperature'; // breadcrumb 用
 
     protected string $view = 'filament.resources.branches.pages.branch-temperature';
 

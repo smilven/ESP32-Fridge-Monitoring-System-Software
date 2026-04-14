@@ -83,14 +83,14 @@ public function updateStatus(Request $request)
     $device->last_seen = now();
     $device->save();
 
-    $token = env('TELEGRAM_BOT_TOKEN');
+    $token = config('services.telegram.bot_token');
     $location = optional($device->fridge->branch)->name ?? 'Unknown';  
 
     // 🚨 1. error（只发一次）
     if ($request->status === 'error' && $oldStatus !== 'error') {  
          $message = "⚠️ <b>MQTT ERROR</b>\n"
             . "Device: {$device->serial_no}\n"
-            . "Location: {$location}\n"
+            . "Outlet: {$location}\n"
             . "Time: " . now();
         $this->sendTelegram($token, $message);
     }
@@ -99,7 +99,7 @@ public function updateStatus(Request $request)
     if ($request->status === 'online' && $oldStatus === 'error') {
         $message = "❤️‍🩹 <b>DEVICE RECOVERED</b>\n"
             . "Device: {$device->serial_no}\n"
-            . "Location: {$location}\n"
+            . "Outlet: {$location}\n"
             . "Time: " . now();
 
         $this->sendTelegram($token, $message);
@@ -132,10 +132,10 @@ public function heartbeat(Request $request)
     // ✅ 只有 offline → online 才发送
     if ($wasOffline) {
         $location = optional($device->fridge->branch)->name ?? 'Unknown';   
-        $token = env('TELEGRAM_BOT_TOKEN');
+        $token = config('services.telegram.bot_token');
         $message = "🟢 <b>DEVICE ONLINE</b>\n"
             . "Device: {$device->serial_no}\n"
-            . "Location: {$location}\n"
+            . "Outlet: {$location}\n"
             . "Time: " . now();
 
         // Tech
@@ -150,7 +150,7 @@ public function heartbeat(Request $request)
 private function sendTelegram($token, $message)
 {
     Http::get("https://api.telegram.org/bot{$token}/sendMessage", [
-        'chat_id' => env('TELEGRAM_TECH_GROUP_ID'),
+        'chat_id' => config('services.telegram.tech_group_id'),
         'text' => $message,
         'parse_mode' => 'HTML'
     ]);

@@ -45,10 +45,10 @@ class BranchForm
                 TextInput::make('phone_number'),
 
                 Select::make('type')
-                ->label('Branch Type')
+                ->label('Outlet Type')
                 ->options([
-                        'Corporate MB' => 'Corporate MB',
-                        'Franchises MB' => 'Franchises MB',
+                        'Corporate' => 'Corporate',
+                        'Franchises' => 'Franchises',
                     ])
                 ->placeholder('Select MB type')
                 ->required(),

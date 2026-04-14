@@ -9,6 +9,8 @@ use Filament\Resources\Pages\ListRecords;
 class ListBranches extends ListRecords
 {
     protected static string $resource = BranchResource::class;
+   
+    protected static ?string $title = 'Outlet';
 
     protected function getHeaderActions(): array
     {

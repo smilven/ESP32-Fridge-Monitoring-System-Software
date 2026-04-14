@@ -36,8 +36,8 @@ class BranchesTable
                 ->label('Type')
                 ->badge()
                 ->color(fn ($state) => match ($state) {
-                    'Corporate MB' => 'primary',
-                    'Franchises MB' => 'info',
+                    'Corporate' => 'primary',
+                    'Franchises' => 'info',
                     default => 'gray',
                 }),
 
@@ -55,7 +55,7 @@ class BranchesTable
                     ->label('View')
                     ->icon('heroicon-o-eye')
                     ->url(fn ($record) => route(
-                        'filament.admin.resources.branches.temperature',
+                        'filament.admin.resources.outlets.temperature',
                         $record
                     )),
 

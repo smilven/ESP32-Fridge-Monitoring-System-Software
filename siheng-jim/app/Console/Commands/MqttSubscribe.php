@@ -55,7 +55,7 @@ private function processMessage($message)
 
         $rom  = $data['rom_address'] ?? null;
         $temp = $data['temperature'] ?? null;
-
+        $tempTolerance = 5;
         if (!$rom || $temp === null) {
             Log::warning("Incomplete payload. ROM: {$rom}, Temp: {$temp}");
             return;
@@ -94,7 +94,7 @@ private function processMessage($message)
 
             $currentIsAlerting = $alertType ? true : false;
             $shouldCreateNewLog = false;
-            $temperatureTolerance = 3; // 温度变化阈值
+            $temperatureTolerance = 5; // 温度变化阈值
 
             if(!$lastLog) {
                 // 没有历史记录，必须创建
@@ -108,8 +108,8 @@ private function processMessage($message)
 
              if($statusChanges){
                 $shouldCreateNewLog = true;
-             }elseif($timeSinceFirstEntry >= 60){
-                // 已经持续了60分钟，强制创建新记录
+             }elseif($timeSinceFirstEntry >= 240){
+                // 已经持续了240分钟，强制创建新记录
                 $shouldCreateNewLog = true;
              }elseif(!$currentIsAlerting && $timDiff >= $temperatureTolerance){   
                 // 温度变化超过阈值，创建新记录 (仅限于从正常变为正常的情况，避免频繁记录警报状态的微小波动)
@@ -170,11 +170,11 @@ private function processMessage($message)
     {
         if (!$log) return;
 
-        $token = env('TELEGRAM_BOT_TOKEN');
-        $chat_id = env('TELEGRAM_CHAT_ID');
-        $qa_chat_id = env('TELEGRAM_QA_ID');
-        $tech_group_id = env('TELEGRAM_TECH_GROUP_ID');
-
+        $token = config('services.telegram.bot_token');
+        $chat_id = config('services.telegram.chat_id');
+        $qa_chat_id = config('services.telegram.qa_id');
+        $tech_group_id = config('services.telegram.tech_group_id');
+        $outletName = optional($sensor->device->fridge->branch)->name ?? 'Unknown';
         if ($alertType) {
             $alert = Alert::where('sensor_id', $sensor->id)
                 ->where('status', 'Active')
@@ -187,22 +187,23 @@ private function processMessage($message)
                     'temperature_log_id' => $log->id,
                     'alert_type' => $alertType,
                     'message' => "Temperature {$temp}°F is out of range",
+                    'outlet_name' => $outletName,
                     'status' => 'Active',
                     'escalated' => false,
                     'reported' => false
                 ]);
 
-                $this->sendTelegram($token, $chat_id, "🚨 <b>FRIDGE ALERT</b>\nSensor: {$sensor->rom_address}\nTemp: {$temp}°F\nType: {$alertType}", $alert->id);
+                $this->sendTelegram($token, $chat_id, "🚨 <b>FRIDGE ALERT</b>\nSensor: {$sensor->rom_address}\nTemp: {$temp}°F\nOutlet: {$outletName}\nType: {$alertType}", $alert->id);
             } else {
                 // 报警持续中的冷却逻辑 (15分钟发一次，且如果已经被 report 了就不再发)
                 if (!$alert->reported && $alert->updated_at->diffInMinutes(now()) >= 15) {
-                    $this->sendTelegram($token, $chat_id, "⚠️ <b>STILL ACTIVE</b>\nSensor: {$sensor->rom_address}\nTemp: {$temp}°F", $alert->id);
+                    $this->sendTelegram($token, $chat_id, "⚠️ <b>STILL ACTIVE</b>\nSensor: {$sensor->rom_address}\nTemp: {$temp}°F\nOutlet: {$outletName}", $alert->id);
                     $alert->touch(); 
                 }
 
                 // 升级逻辑 (15分钟没解决，发去大群)
                 if ($alert->created_at->diffInMinutes(now()) >= 15 && !$alert->escalated) {
-                    $this->sendTelegram($token, $qa_chat_id, "🚨 <b>ESCALATION</b>\nSensor: {$sensor->rom_address}\nImmediate action required!");
+                    $this->sendTelegram($token, $qa_chat_id, "🚨 <b>ESCALATION</b>\nSensor: {$sensor->rom_address}\nOutlet: {$outletName}\nImmediate action required!");
                     $alert->update(['escalated' => true]);
                 }
             }
@@ -212,7 +213,7 @@ private function processMessage($message)
             if ($activeAlert) {
                 $activeAlert->update(['status' => 'Resolved', 'resolved_at' => now()]);
                 
-                $msg = "✅ <b>RESOLVED</b>\nSensor: {$sensor->rom_address}\nTemp: {$temp}°F";
+                $msg = "✅ <b>RESOLVED</b>\nSensor: {$sensor->rom_address}\nTemp: {$temp}°F\nOutlet: {$outletName}";
                 
                 $this->sendTelegram($token, $chat_id, $msg);
 

@@ -14,6 +14,7 @@ class FridgeForm
         return $schema
             ->components([
                 Select::make('branch_id')
+                    ->label('Outlet')
                     ->relationship('branch', 'name')
                     ->required(),
 

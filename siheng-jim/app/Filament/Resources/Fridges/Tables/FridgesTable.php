@@ -22,7 +22,7 @@ class FridgesTable
                     ->sortable(),
 
                 TextColumn::make('branch.name')
-                    ->label('Branch')
+                    ->label('Outlet')
                     ->searchable()
                     ->sortable(),
 

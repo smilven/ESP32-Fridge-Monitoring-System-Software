@@ -17,7 +17,19 @@ use App\Filament\Resources\Branches\Pages\BranchTemperature;
 
 class BranchResource extends Resource
 {
+    protected static ?string $slug = 'outlets';
+
     protected static ?int $navigationSort = 1;
+
+    protected static ?string $title = 'Outlets';
+
+    protected static ?string $navigationLabel ='Outlets';
+
+    protected static ?string $breadcrumb ='Outlets';
+
+    protected static ?string $heading = 'Outlets';
+    
+    
 
     protected static ?string $model = Branch::class;
 
@@ -33,6 +45,15 @@ class BranchResource extends Resource
     public static function table(Table $table): Table
     {
         return BranchesTable::configure($table);
+    }
+
+        public static function getModelLabel(): string
+        {
+            return 'outlet';
+        }
+    public static function getPluralLabel(): ?string
+    {
+        return 'Outlets';
     }
 
     public static function getRelations(): array
@@ -54,7 +75,7 @@ class BranchResource extends Resource
                 'index' => Pages\ListBranches::route('/'),
                 'create' => Pages\CreateBranch::route('/create'),
                 'edit' => Pages\EditBranch::route('/{record}/edit'),
-                'temperature' => Pages\BranchTemperature::route('/{record}/temperature'), // 🔥
+                'temperature' => Pages\BranchTemperature::route('/{record}/temperature'), 
             ];
         }
 }
