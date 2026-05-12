@@ -7,6 +7,7 @@ use App\Filament\Resources\Sensors\Pages\EditSensor;
 use App\Filament\Resources\Sensors\Pages\ListSensors;
 use App\Filament\Resources\Sensors\Schemas\SensorForm;
 use App\Filament\Resources\Sensors\Tables\SensorsTable;
+use App\Filament\Resources\Sensors\RelationManagers\SchedulesRelationManager;
 use App\Models\Sensor;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -37,15 +38,15 @@ class SensorResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            SchedulesRelationManager::class,
         ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ListSensors::route('/'),
-            'edit' => EditSensor::route('/{record}/edit'),
+            'index'  => ListSensors::route('/'),
+            'edit'   => EditSensor::route('/{record}/edit'),
         ];
     }
 }
